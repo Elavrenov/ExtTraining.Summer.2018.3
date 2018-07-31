@@ -5,8 +5,10 @@
     using System.Data.SqlClient;
     using System.Globalization;
     using System.IO;
-    public class NewTradeHandler
+
+    public class NewTradeHandler : IRepository
     {
+
         #region Const
 
         // Исспользование статической field-like инициализированной переменной неприемлемо
@@ -73,6 +75,37 @@
             System.Console.WriteLine("INFO: {0} trades processed", _trades.Count);
         }
 
+        // Сохранение в бд данных это не обязанность метода HandleTrades
+        // Всегда присутсвует возможность измениния бд (возможность записи в несколько баз данных)
+        // Рациональнее будет выделить отдельный интерфейсный метод
+        public void SaveIntoDb(string connectionString)
+        {
+            using (var connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    foreach (var trade in _trades)
+                    {
+                        var command = connection.CreateCommand();
+                        command.Transaction = transaction;
+                        command.CommandType = System.Data.CommandType.StoredProcedure;
+                        command.CommandText = "dbo.Insert_Trade";
+                        command.Parameters.AddWithValue("@sourceCurrency", trade.SourceCurrency);
+                        command.Parameters.AddWithValue("@destinationCurrency", trade.DestinationCurrency);
+                        command.Parameters.AddWithValue("@lots", trade.Lots);
+                        command.Parameters.AddWithValue("@price", trade.Price);
+
+                        command.ExecuteNonQuery();
+                    }
+
+                    transaction.Commit();
+                }
+
+                connection.Close();
+            }
+        }
+
         #endregion
 
         #region Private methods
@@ -114,24 +147,29 @@
             {
                 if (fields.Length != StandartFieldLength)
                 {
-                    System.Console.WriteLine("WARN: Line {0} malformed. Only {1} field(s) found.", lineCount, fields.Length);
+                    System.Console.WriteLine("WARN: Line {0} malformed. Only {1} field(s) found.", lineCount,
+                        fields.Length);
                 }
 
                 if (fields[counter].Length != StandartCurrencyLength)
                 {
-                    System.Console.WriteLine("WARN: Trade currencies on line {0} malformed: '{1}'", lineCount, fields[counter]);
+                    System.Console.WriteLine("WARN: Trade currencies on line {0} malformed: '{1}'", lineCount,
+                        fields[counter]);
                 }
 
                 // Изменение культурных настроек для корректной записи в бд
                 if (!int.TryParse(fields[++counter], NumberStyles.Integer, CultureInfo.InvariantCulture, out tradeAmount))
                 {
-                    System.Console.WriteLine("WARN: Trade amount on line {0} not a valid integer: '{1}'", lineCount, fields[counter]);
+                    System.Console.WriteLine("WARN: Trade amount on line {0} not a valid integer: '{1}'", lineCount,
+                        fields[counter]);
                 }
 
                 // Изменение культурных настроек для корректной записи в бд
-                if (!decimal.TryParse(fields[++counter], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out tradePrice))
+                if (!decimal.TryParse(fields[++counter], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture,
+                    out tradePrice))
                 {
-                    System.Console.WriteLine("WARN: Trade price on line {0} not a valid decimal: '{1}'", lineCount, fields[counter]);
+                    System.Console.WriteLine("WARN: Trade price on line {0} not a valid decimal: '{1}'", lineCount,
+                        fields[counter]);
                 }
 
                 counter++;
@@ -140,37 +178,7 @@
             return (tradeAmount, tradePrice);
         }
 
-        // Сохранение в бд данных это не обязанность метода HandleTrades
-        // Всегда присутсвует возможность измениния бд (возможность записи в несколько баз данных)
-        // Рациональнее будет выделить отдельный приватный метод
-        private void SaveIntoDb(string connectionString)
-        {
-            using (var connection = new SqlConnection(connectionString))
-            {
-                connection.Open();
-                using (var transaction = connection.BeginTransaction())
-                {
-                    foreach (var trade in _trades)
-                    {
-                        var command = connection.CreateCommand();
-                        command.Transaction = transaction;
-                        command.CommandType = System.Data.CommandType.StoredProcedure;
-                        command.CommandText = "dbo.Insert_Trade";
-                        command.Parameters.AddWithValue("@sourceCurrency", trade.SourceCurrency);
-                        command.Parameters.AddWithValue("@destinationCurrency", trade.DestinationCurrency);
-                        command.Parameters.AddWithValue("@lots", trade.Lots);
-                        command.Parameters.AddWithValue("@price", trade.Price);
-
-                        command.ExecuteNonQuery();
-                    }
-
-                    transaction.Commit();
-                }
-
-                connection.Close();
-            }
-        }
-
         #endregion
+
     }
 }

@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IRepository.cs" />
     <Compile Include="NewTradeHandler.cs" />
     <Compile Include="NewTradeRecord.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
