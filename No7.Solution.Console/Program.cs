@@ -1,16 +1,16 @@
-﻿using System.Reflection;
-
-namespace No7.Solution.Console
+﻿namespace No7.Solution.Console
 {
+    using System.Reflection;
     class Program
     {
         static void Main(string[] args)
         {
             var tradeStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("No7.Solution.Console.trades.txt");
+            var tradeProcessor = new NewTradeHandler(tradeStream);
 
-            var tradeProcessor = new TradeHandler();
+            tradeProcessor.HandleTrades();
 
-            tradeProcessor.HandleTrades(tradeStream);
+            System.Console.ReadKey();
         }
     }
 }
