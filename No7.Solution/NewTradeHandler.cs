@@ -75,37 +75,6 @@
             System.Console.WriteLine("INFO: {0} trades processed", _trades.Count);
         }
 
-        // Сохранение в бд данных это не обязанность метода HandleTrades
-        // Всегда присутсвует возможность измениния бд (возможность записи в несколько баз данных)
-        // Рациональнее будет выделить отдельный интерфейсный метод
-        public void SaveIntoDb(string connectionString)
-        {
-            using (var connection = new SqlConnection(connectionString))
-            {
-                connection.Open();
-                using (var transaction = connection.BeginTransaction())
-                {
-                    foreach (var trade in _trades)
-                    {
-                        var command = connection.CreateCommand();
-                        command.Transaction = transaction;
-                        command.CommandType = System.Data.CommandType.StoredProcedure;
-                        command.CommandText = "dbo.Insert_Trade";
-                        command.Parameters.AddWithValue("@sourceCurrency", trade.SourceCurrency);
-                        command.Parameters.AddWithValue("@destinationCurrency", trade.DestinationCurrency);
-                        command.Parameters.AddWithValue("@lots", trade.Lots);
-                        command.Parameters.AddWithValue("@price", trade.Price);
-
-                        command.ExecuteNonQuery();
-                    }
-
-                    transaction.Commit();
-                }
-
-                connection.Close();
-            }
-        }
-
         #endregion
 
         #region Private methods
@@ -176,6 +145,50 @@
             }
 
             return (tradeAmount, tradePrice);
+        }
+
+        #region IRepository implementation
+
+        // Сохранение в бд данных это не обязанность метода HandleTrades
+        // Всегда присутсвует возможность измениния бд (возможность записи в несколько баз данных)
+        // Рациональнее будет выделить отдельный интерфейсный метод
+        // Из-за явной реализации есть возможность вызова метода посредством интерфейсной ссылки
+        void IRepository.Save(string connectionString)
+        {
+            SaveIntoDb(connectionString);
+        }
+
+        #endregion
+        
+        // Сохранение в бд данных это не обязанность метода HandleTrades
+        // Всегда присутсвует возможность измениния бд (возможность записи в несколько баз данных)
+        // Рациональнее будет выделить отдельный приватный метод
+        private void SaveIntoDb(string connectionString)
+        {
+            using (var connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    foreach (var trade in _trades)
+                    {
+                        var command = connection.CreateCommand();
+                        command.Transaction = transaction;
+                        command.CommandType = System.Data.CommandType.StoredProcedure;
+                        command.CommandText = "dbo.Insert_Trade";
+                        command.Parameters.AddWithValue("@sourceCurrency", trade.SourceCurrency);
+                        command.Parameters.AddWithValue("@destinationCurrency", trade.DestinationCurrency);
+                        command.Parameters.AddWithValue("@lots", trade.Lots);
+                        command.Parameters.AddWithValue("@price", trade.Price);
+
+                        command.ExecuteNonQuery();
+                    }
+
+                    transaction.Commit();
+                }
+
+                connection.Close();
+            }
         }
 
         #endregion

@@ -2,6 +2,6 @@
 {
     public interface IRepository
     {
-        void SaveIntoDb(string connectionString);
+        void Save(string connectionString);
     }
 }
