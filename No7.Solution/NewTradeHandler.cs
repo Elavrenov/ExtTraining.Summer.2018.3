@@ -6,7 +6,7 @@
     using System.Globalization;
     using System.IO;
 
-    public class NewTradeHandler : IRepository
+    public class NewTradeHandler : IRepository, ILogger
     {
 
         #region Const
@@ -29,6 +29,8 @@
         // Отсутствует возможность расширения кода в принципе
         private readonly List<NewTradeRecord> _trades;
         private readonly List<string> _lines;
+        private readonly List<string> _logList;
+        private static string _connectionString;
 
         #endregion
 
@@ -41,6 +43,8 @@
         {
             _trades = new List<NewTradeRecord>();
             _lines = new List<string>();
+            _logList = new List<string>();
+            _connectionString = ConfigurationManager.ConnectionStrings["TradeData"].ConnectionString;
 
             using (var reader = new StreamReader(stream))
             {
@@ -70,9 +74,17 @@
             }
 
             // Вызов метода сохранения в бд
-            SaveIntoDb(ConfigurationManager.ConnectionStrings["TradeData"].ConnectionString);
+            SaveIntoDb(_connectionString);
+        }
 
-            System.Console.WriteLine("INFO: {0} trades processed", _trades.Count);
+        public void GetInfo()
+        {
+            foreach (var item in _logList)
+            {
+                System.Console.WriteLine(item);
+            }
+
+            System.Console.WriteLine("\nINFO: {0} trades processed", _trades.Count);
         }
 
         #endregion
@@ -116,33 +128,31 @@
             {
                 if (fields.Length != StandartFieldLength)
                 {
-                    System.Console.WriteLine("WARN: Line {0} malformed. Only {1} field(s) found.", lineCount,
-                        fields.Length);
+                    _logList.Add($"WARN: Line {lineCount} malformed. Only {fields.Length} field(s) found");
                 }
 
                 if (fields[counter].Length != StandartCurrencyLength)
                 {
-                    System.Console.WriteLine("WARN: Trade currencies on line {0} malformed: '{1}'", lineCount,
-                        fields[counter]);
+                    _logList.Add($"WARN: Trade currencies on line {lineCount} malformed: '{fields[counter]}'");
                 }
 
                 // Изменение культурных настроек для корректной записи в бд
                 if (!int.TryParse(fields[++counter], NumberStyles.Integer, CultureInfo.InvariantCulture, out tradeAmount))
                 {
-                    System.Console.WriteLine("WARN: Trade amount on line {0} not a valid integer: '{1}'", lineCount,
-                        fields[counter]);
+                    _logList.Add($"WARN: Trade amount on line {lineCount} not a valid integer: '{fields[counter]}'");
                 }
 
                 // Изменение культурных настроек для корректной записи в бд
                 if (!decimal.TryParse(fields[++counter], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture,
                     out tradePrice))
                 {
-                    System.Console.WriteLine("WARN: Trade price on line {0} not a valid decimal: '{1}'", lineCount,
-                        fields[counter]);
+                    _logList.Add($"WARN: Trade price on line {lineCount} not a valid decimal: '{fields[counter]}'");
                 }
 
                 counter++;
             }
+
+            ++lineCount;
 
             return (tradeAmount, tradePrice);
         }
@@ -158,8 +168,13 @@
             SaveIntoDb(connectionString);
         }
 
+        void IRepository.AddField(string data, int lineCounter)
+        {
+            AddField(data, ref lineCounter);
+        }
+
         #endregion
-        
+
         // Сохранение в бд данных это не обязанность метода HandleTrades
         // Всегда присутсвует возможность измениния бд (возможность записи в несколько баз данных)
         // Рациональнее будет выделить отдельный приватный метод
@@ -192,6 +207,5 @@
         }
 
         #endregion
-
     }
 }

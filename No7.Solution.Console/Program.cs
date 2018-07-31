@@ -9,6 +9,7 @@
             var tradeProcessor = new NewTradeHandler(tradeStream);
 
             tradeProcessor.HandleTrades();
+            tradeProcessor.GetInfo();
 
             System.Console.ReadKey();
         }
