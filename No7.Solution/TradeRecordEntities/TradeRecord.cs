@@ -1,6 +1,6 @@
 ﻿namespace No7.Solution
 {
-    public class NewTradeRecord
+    public class TradeRecord
     {
         // Исспользование автосвойств предпочительнее для описания строк в таблице бд
         // Для описания новой строки таблицы бд потребуется лишь добавить автосвойство, описывающее его
@@ -14,7 +14,7 @@
         // Присутвует возможность расширешия и изменения бд
         // Инициализация объекта класса не через конструктор иррациональна
         // При изменении полей таблицы в конструктор можно просто добавить дополнительные поля
-        public NewTradeRecord(string destinationCurrency, float lots, decimal price, string sourceCurrency)
+        public TradeRecord(string destinationCurrency, string sourceCurrency, float lots, decimal price)
         {
             DestinationCurrency = destinationCurrency;
             Lots = lots;

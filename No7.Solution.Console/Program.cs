@@ -1,15 +1,25 @@
-﻿namespace No7.Solution.Console
+﻿using System.Configuration;
+using No7.Solution.Interfaces;
+using No7.Solution.RecordLocationEntities;
+using No7.Solution.ServiceEntities;
+
+namespace No7.Solution.Console
 {
-    using System.Reflection;
     class Program
     {
         static void Main(string[] args)
         {
-            var tradeStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("No7.Solution.Console.trades.txt");
-            var tradeProcessor = new NewTradeHandler(tradeStream);
+            string sourceFile = ConfigurationManager.AppSettings["TradeFile"];
+            string connectionString = ConfigurationManager.ConnectionStrings["TradeData"].ConnectionString;
 
-            tradeProcessor.HandleTrades();
-            tradeProcessor.GetInfo();
+            LoggerService.Logger = ConsoleLogger.Instance;
+
+            ITradeRecordSource source = new FileTradeRecordSource(sourceFile);
+            ITradeRecordDestination destination = new DbTradeRecordDestination(connectionString);
+
+            IInfoTransferService service = TradeRecordTransferService.Instance;
+
+            service.TransferInfo(source, destination, TradeRecordValidator.Instance, new TradeRecordCreator());
 
             System.Console.ReadKey();
         }
